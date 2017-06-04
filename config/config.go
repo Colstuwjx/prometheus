@@ -144,6 +144,13 @@ var (
 		RefreshInterval: model.Duration(60 * time.Second),
 	}
 
+	// DefaultHttpSDConfig is the default Http SD configuration.
+	DefaultHttpSDConfig = HttpSDConfig{
+		Method:          "GET",
+		Timeout:         model.Duration(30 * time.Second),
+		RefreshInterval: model.Duration(30 * time.Second),
+	}
+
 	// DefaultEC2SDConfig is the default EC2 SD configuration.
 	DefaultEC2SDConfig = EC2SDConfig{
 		Port:            80,
@@ -1180,6 +1187,38 @@ func (c *TritonSDConfig) UnmarshalYAML(unmarshal func(interface{}) error) error 
 		return fmt.Errorf("Triton SD configuration requires RefreshInterval to be a positive integer")
 	}
 	return checkOverflow(c.XXX, "triton_sd_config")
+}
+
+// HttpSDConfig is the configuration for common http based service discovery.
+type HttpSDConfig struct {
+	Url             string            `yaml:"url,omitempty"`
+	Method          string            `yaml:"method,omitempty"`
+	Headers         map[string]string `yaml:"headers,omitempty"`
+	Body            string            `yaml:"body,omitempty"`
+	Timeout         model.Duration    `yaml:"timeout,omitempty"`
+	RefreshInterval model.Duration    `yaml:"refresh_interval,omitempty"`
+	TLSConfig       TLSConfig         `yaml:"tls_config,omitempty"`
+
+	// Catches all undefined fields and must be empty after parsing.
+	XXX map[string]interface{} `yaml:",inline"`
+}
+
+// UnmarshalYAML implements the yaml.Unmarshaler interface.
+func (c *HttpSDConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	*c = DefaultHttpSDConfig
+	type plain HttpSDConfig
+	err := unmarshal((*plain)(c))
+	if err != nil {
+		return err
+	}
+	if len(c.Url) == 0 {
+		return fmt.Errorf("Http SD config requires target api url")
+	}
+	if c.RefreshInterval <= 0 {
+		return fmt.Errorf("Http SD configuration requires RefreshInterval to be a positive integer")
+	}
+
+	return checkOverflow(c.XXX, "http_sd_config")
 }
 
 // RelabelAction is the action to be performed on relabeling.
